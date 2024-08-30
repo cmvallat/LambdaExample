@@ -1,0 +1,74 @@
+{
+  "configurations": [
+    {
+      "type": "aws-sam",
+      "request": "direct-invoke",
+      "name": "lambda-dotnet6-1:HelloWorldFunction (dotnet6)",
+      "invokeTarget": {
+        "target": "template",
+        "templatePath": "${workspaceFolder}/lambda-dotnet6-1/template.yaml",
+        "logicalId": "HelloWorldFunction"
+      },
+      "lambda": {
+        "payload": {},
+        "environmentVariables": {},
+        "runtime": "dotnet6"
+      }
+    },
+    {
+      "type": "aws-sam",
+      "request": "direct-invoke",
+      "name": "API lambda-dotnet6-1:HelloWorldFunction (dotnet6)",
+      "invokeTarget": {
+        "target": "api",
+        "templatePath": "${workspaceFolder}/lambda-dotnet6-1/template.yaml",
+        "logicalId": "HelloWorldFunction"
+      },
+      "api": {
+        "path": "/hello",
+        "httpMethod": "get",
+        "payload": {
+          "json": {}
+        }
+      },
+      "lambda": {
+        "runtime": "dotnet6"
+      }
+    },
+    {
+      "type": "aws-sam",
+      "request": "direct-invoke",
+      "name": "lambda-dotnet6:HelloWorldFunction (dotnet6)",
+      "invokeTarget": {
+        "target": "template",
+        "templatePath": "${workspaceFolder}/lambda-dotnet6/template.yaml",
+        "logicalId": "HelloWorldFunction"
+      },
+      "lambda": {
+        "payload": {},
+        "environmentVariables": {},
+        "runtime": "dotnet6"
+      }
+    },
+    {
+      "type": "aws-sam",
+      "request": "direct-invoke",
+      "name": "API lambda-dotnet6:HelloWorldFunction (dotnet6)",
+      "invokeTarget": {
+        "target": "api",
+        "templatePath": "${workspaceFolder}/lambda-dotnet6/template.yaml",
+        "logicalId": "HelloWorldFunction"
+      },
+      "api": {
+        "path": "/hello",
+        "httpMethod": "get",
+        "payload": {
+          "json": {}
+        }
+      },
+      "lambda": {
+        "runtime": "dotnet6"
+      }
+    }
+  ]
+}
