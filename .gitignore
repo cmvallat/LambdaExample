@@ -6,9 +6,13 @@
 .aws-sam/cache/51bc5a6c-ddb9-441a-ac46-5165e7e925c9/HelloWorld.dll
 .aws-sam/cache/51bc5a6c-ddb9-441a-ac46-5165e7e925c9/HelloWorld.pdb
 *.[Cc]ache
+.aws-sam
 *.dll
 *.deps.json
 *runtimeconfig.json
 omnisharp.json
 build.toml
 samconfig.toml
+README.md
+README.TOOLKIT.md
+
