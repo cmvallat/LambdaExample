@@ -34,8 +34,7 @@ namespace HelloWorld
 
         public string Handle(User user)
         {
-            var connection = new MySqlConnection("");
-            connection.Open();
+            var connection = new MySqlConnection("server=devdatabasejuly24.cl0k26eoghf5.us-east-1.rds.amazonaws.com;port=3306;database=party;user=cvallat;password=PartyPushProject24!");            connection.Open();
             try
             {
                 //call the stored procedure with parameters
