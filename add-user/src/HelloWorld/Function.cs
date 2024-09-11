@@ -21,10 +21,10 @@ namespace HelloWorld
 {
     public class Function
     {
-        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
+        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(User request, ILambdaContext context)
         {
-            var user = JsonSerializer.Deserialize<User>(request.Body);
-            var result = Handle(user);
+            // var user = JsonSerializer.Deserialize<User>(request.Body);
+            var result = Handle(request);
             return new APIGatewayHttpApiV2ProxyResponse
             {
                 Body = result,
@@ -41,8 +41,8 @@ namespace HelloWorld
                 MySqlCommand cmd = new MySqlCommand("AddUser", connection);
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@un", user.username);
-                cmd.Parameters.AddWithValue("@pw", user.password);
-                cmd.Parameters.AddWithValue("@pnum", user.phone_number);
+                cmd.Parameters.AddWithValue("@e", user.email);
+                cmd.Parameters.AddWithValue("@cun", user.cognito_username);
 
                 // Execute the command and get the number of rows affected, then close the connection
                 int rowsAffected = cmd.ExecuteNonQuery();

@@ -1,4 +1,4 @@
-namespace ScratchLambda;
+namespace HelloWorld;
 
 public class Host
 {
