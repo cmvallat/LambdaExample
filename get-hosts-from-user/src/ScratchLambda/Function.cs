@@ -6,13 +6,13 @@ using System.Net.Http;
 using System.Text.Json;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.APIGatewayEvents;
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.DataModel;
 using System.Data;
 using System.Data.SqlClient;
 using MySql.Data.MySqlClient;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using LambdaLayerObjects;
+using LambdaLayerCommonFunctions;
 
 using Amazon.Lambda.Core;
 
@@ -23,6 +23,7 @@ namespace ScratchLambda
 {
     public class Function
     {
+        DatabaseConnection dbConnection = new DatabaseConnection();
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
             // Todo: business logic goes here
@@ -41,7 +42,8 @@ namespace ScratchLambda
 
         public List<Host> Handle(Guid cognito_username)
         {
-            var connection = new MySqlConnection("server=devdatabasejuly24.cl0k26eoghf5.us-east-1.rds.amazonaws.com;port=3306;database=party;user=cvallat;password=PartyPushProject24!");
+            var secret = dbConnection.GetDatabaseSecret().Result;
+            var connection = new MySqlConnection(secret);
             connection.Open();
             try
             {

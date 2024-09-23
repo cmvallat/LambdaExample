@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   test-second-lambda
 Transform:
-- AWS::Serverless-2016-10-31
+  - AWS::Serverless-2016-10-31
 
 # Resources declares the AWS resources that you want to include in the stack
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
@@ -16,15 +16,15 @@ Resources:
     Properties:
       CodeUri: ./src/ScratchLambda/
       Handler: ScratchLambda::ScratchLambda.Function::FunctionHandler
-      Runtime: dotnet6
+      Runtime: dotnet8
       Architectures:
-      - x86_64
+        - x86_64
       MemorySize: 256
       Timeout: 100
       Description: A Lambda function that returns a static string.
       Policies:
         # Give Lambda basic execution Permission to the helloFromLambda
-      - AWSLambdaBasicExecutionRole
+        - AWSLambdaBasicExecutionRole
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:

@@ -1,5 +1,4 @@
-namespace HelloWorld;
-
+namespace LambdaLayerObjects;
 public class Host
 {
     public string username { get; set; }

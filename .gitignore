@@ -15,4 +15,9 @@ build.toml
 samconfig.toml
 README.md
 README.TOOLKIT.md
-
+lambda-layer-objects/bin
+lambda-layer-objects/obj
+lambda-layer-objects/LambdaLayerObjectModels
+lambda-layer-common-functions/bin
+lambda-layer-common-functions/obj
+lambda-layer-common-functions/LambdaLayerObjectModels
