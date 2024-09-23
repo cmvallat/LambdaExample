@@ -1,7 +1,4 @@
-using System;
-
-namespace HelloWorld;
-
+namespace LambdaLayerObjects;
 public class User
 {
     public string username { get; set; }

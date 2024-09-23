@@ -6,13 +6,13 @@ using System.Net.Http;
 using System.Text.Json;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.APIGatewayEvents;
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.DataModel;
 using System.Data;
 using System.Data.SqlClient;
 using MySql.Data.MySqlClient;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using LambdaLayerObjects;
+using LambdaLayerCommonFunctions;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -21,6 +21,7 @@ namespace HelloWorld
 {
     public class Function
     {
+        DatabaseConnection dbConnection = new DatabaseConnection();
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(User request, ILambdaContext context)
         {
             // var user = JsonSerializer.Deserialize<User>(request.Body);
@@ -34,7 +35,9 @@ namespace HelloWorld
 
         public string Handle(User user)
         {
-            var connection = new MySqlConnection("server=devdatabasejuly24.cl0k26eoghf5.us-east-1.rds.amazonaws.com;port=3306;database=party;user=cvallat;password=PartyPushProject24!");            connection.Open();
+            var secret = dbConnection.GetDatabaseSecret().Result;
+            var connection = new MySqlConnection(secret);
+            connection.Open();
             try
             {
                 //call the stored procedure with parameters
