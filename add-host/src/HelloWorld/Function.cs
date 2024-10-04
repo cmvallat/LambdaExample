@@ -22,9 +22,10 @@ namespace HelloWorld
     public class Function
     {
         DatabaseConnection dbConnection = new DatabaseConnection();
-        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(User request, ILambdaContext context)
+        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(Host request, ILambdaContext context)
         {
             var result = Handle(request);
+            // Todo: edit status code if there are exceptions
             return new APIGatewayHttpApiV2ProxyResponse
             {
                 Body = result,
@@ -32,7 +33,7 @@ namespace HelloWorld
             };
         }
 
-        public string Handle(User user)
+        public string Handle(Host host)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
@@ -40,11 +41,13 @@ namespace HelloWorld
             try
             {
                 //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("AddUser", connection);
+                MySqlCommand cmd = new MySqlCommand("AddHost", connection);
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@un", user.username);
-                cmd.Parameters.AddWithValue("@e", user.email);
-                cmd.Parameters.AddWithValue("@cun", user.cognito_username);
+                cmd.Parameters.AddWithValue("@un", host.username);
+                cmd.Parameters.AddWithValue("@pn", host.party_name);
+                cmd.Parameters.AddWithValue("@pc", host.party_code);
+                cmd.Parameters.AddWithValue("@cun", host.cognito_username);
+                cmd.Parameters.AddWithValue("inv", host.invite_only);
 
                 // Execute the command and get the number of rows affected, then close the connection
                 int rowsAffected = cmd.ExecuteNonQuery();
