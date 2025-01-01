@@ -1,47 +1,80 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Text.Json;
-
 using Amazon.Lambda.Core;
 using Amazon.Lambda.APIGatewayEvents;
+using System.Data;
+using System.Data.SqlClient;
+using MySql.Data.MySqlClient;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
+using LambdaLayerObjects;
+using LambdaLayerCommonFunctions;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
-namespace HelloWorld;
-
-public class Function
+namespace HelloWorld
 {
-
-    private static readonly HttpClient client = new HttpClient();
-
-    private static async Task<string> GetCallingIP()
+    public class Function
     {
-        client.DefaultRequestHeaders.Accept.Clear();
-        client.DefaultRequestHeaders.Add("User-Agent", "AWS Lambda .Net Client");
-
-        var msg = await client.GetStringAsync("http://checkip.amazonaws.com/").ConfigureAwait(continueOnCapturedContext:false);
-
-        return msg.Replace("\n","");
-    }
-
-    public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest apigProxyEvent, ILambdaContext context)
-    {
-
-        var location = await GetCallingIP();
-        var body = new Dictionary<string, string>
+        DatabaseConnection dbConnection = new DatabaseConnection();
+        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(Food request, ILambdaContext context)
         {
-            { "message", "hello world" },
-            { "location", location }
-        };
+            var result = Handle(request);
+            var statusCode = 200;
+            // change later
+            // if(result != "Success!")
+            // {
+            //     statusCode = 500;
+            // }
+            return new APIGatewayHttpApiV2ProxyResponse
+            {
+                Body = result,
+                StatusCode = statusCode
+            };
+        }
 
-        return new APIGatewayProxyResponse
+        public string Handle(Food food)
         {
-            Body = JsonSerializer.Serialize(body),
-            StatusCode = 200,
-            Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
-        };
+            var secret = dbConnection.GetDatabaseSecret().Result;
+            var connection = new MySqlConnection(secret);
+            connection.Open();
+            try
+            {
+                //call the stored procedure with parameters
+                MySqlCommand cmd = new MySqlCommand("UpdateFoodStatus", connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@item", food.item_name);
+                cmd.Parameters.AddWithValue("@pc", food.party_code);
+                cmd.Parameters.AddWithValue("@stat", food.status);
+
+                // Execute the command and get the number of rows affected, then close the connection
+                int rowsAffected = cmd.ExecuteNonQuery();
+                connection.Close();
+                
+                //if something was updated in the db, return success
+                if(rowsAffected != 0)
+                {
+                    return "Success!";
+                }
+                //if nothing was updated in the db, but not a SQL error, return generic error message
+                return "General Database Exception: Something went wrong";
+            }
+            catch (MySqlException ex)
+            {
+                // Duplicate entry on foreign key party_code
+                if (ex.Number == 1062)
+                {
+                    return "SQL Exception 1062: duplicate entry. Could not create object."; 
+                }
+
+                // throw generic message for other SQL errors
+                return "SQL Exception: Something went wrong";
+            }
+        }
     }
 }

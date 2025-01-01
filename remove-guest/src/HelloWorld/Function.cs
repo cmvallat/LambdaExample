@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Mvc;
 using LambdaLayerObjects;
 using LambdaLayerCommonFunctions;
 
+using Amazon.Lambda.Core;
+
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
@@ -22,23 +24,32 @@ namespace HelloWorld
     public class Function
     {
         DatabaseConnection dbConnection = new DatabaseConnection();
-        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(Food request, ILambdaContext context)
+        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
-            var result = Handle(request);
-            var statusCode = 200;
-            // change later
-            // if(result != "Success!")
-            // {
-            //     statusCode = 500;
-            // }
-            return new APIGatewayHttpApiV2ProxyResponse
+            var party_code_string = "";
+            var guest_name_string = "";
+            var cognito_username = Guid.NewGuid();
+            if(request.QueryStringParameters.ContainsKey("party_code"))
             {
-                Body = result,
-                StatusCode = statusCode
+                party_code_string = request.QueryStringParameters["party_code"];
+            }
+            if(request.QueryStringParameters.ContainsKey("guest_name"))
+            {
+                guest_name_string = request.QueryStringParameters["guest_name"];
+            }
+            if(request.QueryStringParameters.ContainsKey("cognito_username"))
+            {
+                var cognito_username_string = request.QueryStringParameters["cognito_username"];
+                cognito_username = new Guid(cognito_username_string);
+            }
+            var body = Handle(party_code_string, guest_name_string, cognito_username);
+            return new APIGatewayHttpApiV2ProxyResponse{
+                StatusCode = 200,
+                Body = body
             };
         }
 
-        public string Handle(Food food)
+        public string Handle(String party_code, String guest_name_string, Guid cognito_username)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
@@ -46,15 +57,13 @@ namespace HelloWorld
             try
             {
                 //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("AddFood", connection);
+                MySqlCommand cmd = new MySqlCommand("DeleteGuest", connection);
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@item", food.item_name);
-                cmd.Parameters.AddWithValue("@pc", food.party_code);
-                cmd.Parameters.AddWithValue("@st", food.status);
-                cmd.Parameters.AddWithValue("@un", food.username);
-                cmd.Parameters.AddWithValue("@cun", food.cognito_username);
+                cmd.Parameters.AddWithValue("@pc", party_code);
+                cmd.Parameters.AddWithValue("@cun", cognito_username);
+                cmd.Parameters.AddWithValue("@gn", guest_name_string);
 
-                // Execute the command and get the number of rows affected, then close the connection
+               // Execute the command and get the number of rows affected, then close the connection
                 int rowsAffected = cmd.ExecuteNonQuery();
                 connection.Close();
                 
@@ -68,14 +77,8 @@ namespace HelloWorld
             }
             catch (MySqlException ex)
             {
-                // Duplicate entry on foreign key party_code
-                if (ex.Number == 1062)
-                {
-                    return "SQL Exception 1062: duplicate entry. Could not create object."; 
-                }
-
-                // throw generic message for other SQL errors
-                return "SQL Exception: Something went wrong";
+                // Todo: add exception handling
+                return null;
             }
         }
     }

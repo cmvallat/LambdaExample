@@ -6,8 +6,8 @@
   "isBase64Encoded": false,
   "queryStringParameters": {
     "party_code": "cmvcatan",
-    "cognito_username": "64183478-90c1-70b8-732e-b4be05d555d2",
-    "item_name": "chips"
+    "guest_name": "Phil",
+    "cognito_username": "1fecad9f-a9d4-4d05-b38d-cd537420e4e2"
   },
   "pathParameters": {
     "proxy": "/path/to/resource"
