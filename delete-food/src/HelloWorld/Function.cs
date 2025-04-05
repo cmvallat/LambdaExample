@@ -26,27 +26,71 @@ namespace HelloWorld
         DatabaseConnection dbConnection = new DatabaseConnection();
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
-            var party_code_string = "";
-            var item_name_string = "";
-            var cognito_username = Guid.NewGuid();
-            if(request.QueryStringParameters.ContainsKey("party_code"))
+            string party_code = string.Empty;
+            string item_name = string.Empty;
+            Guid cognito_username = Guid.NewGuid();
+
+            try
             {
-                party_code_string = request.QueryStringParameters["party_code"];
+                // Ensure QueryStringParameters is not null
+                if (request.QueryStringParameters != null)
+                {
+                    if (request.QueryStringParameters.ContainsKey("party_code"))
+                    {
+                        party_code = request.QueryStringParameters["party_code"];
+                    }
+
+                    if (request.QueryStringParameters.ContainsKey("item_name"))
+                    {
+                        item_name = request.QueryStringParameters["item_name"];
+                    }
+
+                    if (request.QueryStringParameters.ContainsKey("cognito_username"))
+                    {
+                        var cognito_username_string = request.QueryStringParameters["cognito_username"];
+                        if (!Guid.TryParse(cognito_username_string, out cognito_username))
+                        {
+                            return new APIGatewayHttpApiV2ProxyResponse
+                            {
+                                StatusCode = 400,
+                                Body = JsonSerializer.Serialize(new { error = "Invalid cognito_username format." })
+                            };
+                        }
+                    }
+                }
+
+                // Validate required fields
+                if (string.IsNullOrEmpty(party_code) || 
+                    string.IsNullOrEmpty(item_name) || 
+                    cognito_username == Guid.Empty)
+                {
+                    return new APIGatewayHttpApiV2ProxyResponse
+                    {
+                        StatusCode = 400,
+                        Body = JsonSerializer.Serialize(new { error = "party_code and item_name are required." })
+                    };
+                }
+
+                // Handle the request and get the response
+                string response = Handle(party_code, item_name, cognito_username);
+
+                // Check if the response indicates success or failure
+                int statusCode = response == "Success!" ? 200 : 400;
+
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = statusCode,
+                    Body = JsonSerializer.Serialize(new { message = response })
+                };
             }
-            if(request.QueryStringParameters.ContainsKey("item_name"))
+            catch (Exception)
             {
-                item_name_string = request.QueryStringParameters["item_name"];
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = 500,
+                    Body = JsonSerializer.Serialize(new { error = "Internal Server Error" })
+                };
             }
-            if(request.QueryStringParameters.ContainsKey("cognito_username"))
-            {
-                var cognito_username_string = request.QueryStringParameters["cognito_username"];
-                cognito_username = new Guid(cognito_username_string);
-            }
-            var body = Handle(party_code_string, item_name_string, cognito_username);
-            return new APIGatewayHttpApiV2ProxyResponse{
-                StatusCode = 200,
-                Body = body
-            };
         }
 
         public string Handle(String party_code, String item_name_string, Guid cognito_username)
@@ -54,31 +98,38 @@ namespace HelloWorld
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
             connection.Open();
+
             try
             {
                 //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("DeleteFood", connection);
+                MySqlCommand cmd = new MySqlCommand("DeleteFood", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@pc", party_code);
                 cmd.Parameters.AddWithValue("@cun", cognito_username);
                 cmd.Parameters.AddWithValue("@item", item_name_string);
 
-               // Execute the command and get the number of rows affected, then close the connection
+                // Execute the command and check rows affected
                 int rowsAffected = cmd.ExecuteNonQuery();
-                connection.Close();
-                
+
                 //if something was added to the db, return success
-                if(rowsAffected != 0)
-                {
-                    return "Success!";
-                }
-                //if nothing was updated in the db, but not a SQL error, return generic error message
-                return "General Database Exception: Something went wrong";
+                return rowsAffected > 0
+                    ? "Success!"
+                    : "No matching record found to delete.";
             }
             catch (MySqlException ex)
             {
-                // Todo: add exception handling
-                return null;
+                // Duplicate entry on foreign key party_code
+                // throw generic message for other SQL errors
+                return ex.Number == 1062
+                    ? "SQL Exception 1062: duplicate entry. Could not delete object."
+                    : ex.Message;
+            }
+            catch
+            {
+                return "An unexpected error occurred while processing the request.";
             }
         }
     }
