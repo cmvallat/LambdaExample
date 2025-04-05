@@ -26,20 +26,19 @@ namespace HelloWorld
         DatabaseConnection dbConnection = new DatabaseConnection();
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
-            var cognito_username = Guid.NewGuid();
-            if(request.QueryStringParameters.ContainsKey("cognito_username"))
+            var party_code_string = "";
+            if(request.QueryStringParameters.ContainsKey("party_code"))
             {
-                var cognito_username_string = request.QueryStringParameters["cognito_username"];
-                cognito_username = new Guid(cognito_username_string);
+                party_code_string = request.QueryStringParameters["party_code"];
             }
-            var body = Handle(cognito_username);
+            var body = Handle(party_code_string);
             return new APIGatewayHttpApiV2ProxyResponse{
                 StatusCode = 200,
                 Body = JsonSerializer.Serialize(body)
             };
         }
 
-        public List<Host> Handle(Guid cognito_username)
+        public List<Guest> Handle(String party_code)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
@@ -47,29 +46,29 @@ namespace HelloWorld
             try
             {
                 //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("GetGuestsFromUser", connection);
+                MySqlCommand cmd = new MySqlCommand("GetAllGuests", connection);
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@cun", cognito_username);
+                cmd.Parameters.AddWithValue("@pc", party_code);
 
                 // Execute the command and return the object, then close the connection
-                List<Host> returnedHostList = new List<Host>();
+                List<Guest> returnedGuestList = new List<Guest>();
 
                 using (MySqlDataReader reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        returnedHostList.Add(new Host(){
+                        returnedGuestList.Add(new Guest(){
                             username = reader.GetString("username"),
-                            party_name = reader.GetString("party_name"),
+                            guest_name = reader.GetString("guest_name"),
                             party_code = reader.GetString("party_code"),
                             cognito_username = reader.GetGuid("cognito_username"),
-                            invite_only = reader.GetInt32("invite_only")
+                            at_party = reader.GetInt32("at_party")
                         });
                     }
                 }
                 connection.Close();
 
-                return returnedHostList;
+                return returnedGuestList;
             }
             catch (MySqlException ex)
             {

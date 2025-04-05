@@ -26,20 +26,30 @@ namespace HelloWorld
         DatabaseConnection dbConnection = new DatabaseConnection();
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
+            var party_code_string = "";
+            var item_name_string = "";
             var cognito_username = Guid.NewGuid();
+            if(request.QueryStringParameters.ContainsKey("party_code"))
+            {
+                party_code_string = request.QueryStringParameters["party_code"];
+            }
+            if(request.QueryStringParameters.ContainsKey("item_name"))
+            {
+                item_name_string = request.QueryStringParameters["item_name"];
+            }
             if(request.QueryStringParameters.ContainsKey("cognito_username"))
             {
                 var cognito_username_string = request.QueryStringParameters["cognito_username"];
                 cognito_username = new Guid(cognito_username_string);
             }
-            var body = Handle(cognito_username);
+            var body = Handle(party_code_string, item_name_string, cognito_username);
             return new APIGatewayHttpApiV2ProxyResponse{
                 StatusCode = 200,
-                Body = JsonSerializer.Serialize(body)
+                Body = body
             };
         }
 
-        public List<Host> Handle(Guid cognito_username)
+        public string Handle(String party_code, String item_name_string, Guid cognito_username)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
@@ -47,29 +57,23 @@ namespace HelloWorld
             try
             {
                 //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("GetGuestsFromUser", connection);
+                MySqlCommand cmd = new MySqlCommand("DeleteFood", connection);
                 cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@pc", party_code);
                 cmd.Parameters.AddWithValue("@cun", cognito_username);
+                cmd.Parameters.AddWithValue("@item", item_name_string);
 
-                // Execute the command and return the object, then close the connection
-                List<Host> returnedHostList = new List<Host>();
-
-                using (MySqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        returnedHostList.Add(new Host(){
-                            username = reader.GetString("username"),
-                            party_name = reader.GetString("party_name"),
-                            party_code = reader.GetString("party_code"),
-                            cognito_username = reader.GetGuid("cognito_username"),
-                            invite_only = reader.GetInt32("invite_only")
-                        });
-                    }
-                }
+               // Execute the command and get the number of rows affected, then close the connection
+                int rowsAffected = cmd.ExecuteNonQuery();
                 connection.Close();
-
-                return returnedHostList;
+                
+                //if something was added to the db, return success
+                if(rowsAffected != 0)
+                {
+                    return "Success!";
+                }
+                //if nothing was updated in the db, but not a SQL error, return generic error message
+                return "General Database Exception: Something went wrong";
             }
             catch (MySqlException ex)
             {
