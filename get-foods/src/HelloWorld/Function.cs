@@ -26,22 +26,75 @@ namespace HelloWorld
         DatabaseConnection dbConnection = new DatabaseConnection();
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
-            var party_code_string = "";
-            var cognito_username = Guid.NewGuid();
-            if(request.QueryStringParameters.ContainsKey("party_code"))
+            string party_code = string.Empty;
+            Guid cognito_username = Guid.NewGuid();
+
+            try
             {
-                party_code_string = request.QueryStringParameters["party_code"];
+                // Ensure QueryStringParameters is not null
+                if (request.QueryStringParameters != null)
+                {
+                    if (request.QueryStringParameters.ContainsKey("party_code"))
+                    {
+                        party_code = request.QueryStringParameters["party_code"];
+                    }
+
+                    if (request.QueryStringParameters.ContainsKey("cognito_username"))
+                    {
+                        var cognito_username_string = request.QueryStringParameters["cognito_username"];
+                        if (!Guid.TryParse(cognito_username_string, out cognito_username))
+                        {
+                            return new APIGatewayHttpApiV2ProxyResponse
+                            {
+                                StatusCode = 400,
+                                Body = JsonSerializer.Serialize(new { error = "Invalid cognito_username format." })
+                            };
+                        }
+                    }
+                }
+
+                // Validate required fields
+                if (string.IsNullOrEmpty(party_code) || cognito_username == Guid.Empty)
+                {
+                    return new APIGatewayHttpApiV2ProxyResponse
+                    {
+                        StatusCode = 400,
+                        Body = JsonSerializer.Serialize(new { error = "party_code and cognito_username are required." })
+                    };
+                }
+
+                // Retrieve food list
+                var foodList = Handle(party_code, cognito_username);
+
+                // Handle empty lists or successful retrieval
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = 200,
+                    Body = JsonSerializer.Serialize(new
+                    {
+                        message = foodList.Count > 0 ? "Food list retrieved successfully." : "No foods found.",
+                        data = foodList
+                    })
+                };
             }
-            if(request.QueryStringParameters.ContainsKey("cognito_username"))
+            catch (MySqlException ex)
             {
-                var cognito_username_string = request.QueryStringParameters["cognito_username"];
-                cognito_username = new Guid(cognito_username_string);
+                // Handle MySQL-specific exceptions
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = 500,
+                    Body = JsonSerializer.Serialize(new { error = $"MySQL error: {ex.Message}" })
+                };
             }
-            var body = Handle(party_code_string, cognito_username);
-            return new APIGatewayHttpApiV2ProxyResponse{
-                StatusCode = 200,
-                Body = JsonSerializer.Serialize(body)
-            };
+            catch (Exception ex)
+            {
+                // Handle unexpected errors
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = 500,
+                    Body = JsonSerializer.Serialize(new { error = $"Internal Server Error: {ex.Message}" })
+                };
+            }
         }
 
         public List<Food> Handle(String party_code, Guid cognito_username)
@@ -49,10 +102,14 @@ namespace HelloWorld
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
             connection.Open();
+
             try
             {
                 //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("GetCurrentFoods", connection);
+                MySqlCommand cmd = new MySqlCommand("GetCurrentFoods", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@pc", party_code);
                 cmd.Parameters.AddWithValue("@cun", cognito_username);
@@ -73,14 +130,16 @@ namespace HelloWorld
                         });
                     }
                 }
-                connection.Close();
 
                 return returnedFoodList;
             }
             catch (MySqlException ex)
             {
-                // Todo: add exception handling
-                return null;
+                throw new Exception($"Failed to execute query: {ex.Message}", ex);
+            }
+            finally
+            {
+                connection.Close();
             }
         }
     }
