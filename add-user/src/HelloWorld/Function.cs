@@ -22,26 +22,63 @@ namespace HelloWorld
     public class Function
     {
         DatabaseConnection dbConnection = new DatabaseConnection();
-        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(User request, ILambdaContext context)
+        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
-            var result = Handle(request);
-            return new APIGatewayHttpApiV2ProxyResponse
+            User userRequest = JsonSerializer.Deserialize<User>(request.Body);
+
+            try
             {
-                Body = result,
-                StatusCode = 200
-            };
+                // Call the Handle method to process the request.
+                string result = Handle(userRequest);
+
+                // Determine status code based on the result.
+                int statusCode = result == "Success!" ? 200 : 400;
+
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = statusCode,
+                    Headers = new Dictionary<string, string>
+                    {
+                        { "Content-Type", "application/json" }
+                    },
+                    Body = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        message = result
+                    })
+                };
+            }
+            catch (Exception ex)
+            {
+                // Return a 500 response in case of an unhandled exception.
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = 500,
+                    Headers = new Dictionary<string, string>
+                    {
+                        { "Content-Type", "application/json" }
+                    },
+                    Body = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        error = "Internal Server Error",
+                        details = ex.Message
+                    })
+                };
+            }
         }
 
         public string Handle(User user)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
-            var connection = new MySqlConnection(secret);
+            using var connection = new MySqlConnection(secret);
             connection.Open();
+
             try
             {
-                //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("AddUser", connection);
-                cmd.CommandType = CommandType.StoredProcedure;
+                // Call the stored procedure with parameters.
+                MySqlCommand cmd = new MySqlCommand("AddUser", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
                 cmd.Parameters.AddWithValue("@un", user.username);
                 cmd.Parameters.AddWithValue("@e", user.email);
                 cmd.Parameters.AddWithValue("@cun", user.cognito_username);
@@ -50,24 +87,19 @@ namespace HelloWorld
                 int rowsAffected = cmd.ExecuteNonQuery();
                 connection.Close();
                 
-                //if something was added to the db, return success
-                if(rowsAffected != 0)
-                {
-                    return "Success!";
-                }
-                //if nothing was updated in the db, but not a SQL error, return generic error message
-                return "General Database Exception: Something went wrong";
+                // if something was added to the db, return success
+                // if nothing was updated in the db, but not a SQL error, return generic error message
+                return rowsAffected > 0
+                    ? "Success!"
+                    : "General Database Exception: Something went wrong";
             }
             catch (MySqlException ex)
             {
                 // Duplicate entry on foreign key party_code
-                if (ex.Number == 1062)
-                {
-                    return "SQL Exception 1062: duplicate entry. Could not create object."; 
-                }
-
                 // throw generic message for other SQL errors
-                return "SQL Exception: Something went wrong";
+                return ex.Number == 1062
+                    ? "SQL Exception 1062: duplicate entry. Could not create object."
+                    : ex.Message;
             }
         }
     }
