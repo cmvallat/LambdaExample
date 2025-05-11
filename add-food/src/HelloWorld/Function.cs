@@ -41,6 +41,9 @@ namespace HelloWorld
                     Body = System.Text.Json.JsonSerializer.Serialize(new
                     {
                         message = result
+                        // need to keep this empty list because of how we
+                        // are decoding the "data" field on the front end
+                        // data = new List<Food>(){}
                     })
                 };
             }
@@ -58,6 +61,9 @@ namespace HelloWorld
                     {
                         error = "Internal Server Error",
                         details = ex.Message
+                        // need to keep this empty list because of how we
+                        // are decoding the "data" field on the front end
+                        // data = new List<Food>(){}
                     })
                 };
             }

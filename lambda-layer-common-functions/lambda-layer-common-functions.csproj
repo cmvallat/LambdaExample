@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.SecretsManager" Version="4.0.0-preview.2" />
-    <PackageReference Include="AWSSDK.Core" Version="4.0.0-preview.2" />
+    <PackageReference Include="AWSSDK.SecretsManager" Version="3.7.200.8" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.200.8" />
   </ItemGroup>
   <ItemGroup>
     <!-- Include project refs here as needed -->

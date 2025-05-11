@@ -103,6 +103,30 @@ namespace HelloWorld
             var connection = new MySqlConnection(secret);
             connection.Open();
 
+            // make sure the user is the host or a guest of the party
+            // otherwise, they should not be able to get the food list
+            MySqlCommand authorizeCmd = new MySqlCommand("AuthorizeUser", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            authorizeCmd.Parameters.AddWithValue("@pc", party_code);
+            authorizeCmd.Parameters.AddWithValue("@cun", cognito_username);
+
+            bool isAuthorized = false;
+            using (var reader = authorizeCmd.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    isAuthorized = reader.GetInt32("authorized") == 1;
+                }
+            }
+
+            if (!isAuthorized)
+            {
+                throw new UnauthorizedAccessException("User not authorized to access this party's food list.");
+            }
+
+            // if authorized, get the food list
             try
             {
                 //call the stored procedure with parameters
@@ -112,7 +136,6 @@ namespace HelloWorld
                 };
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@pc", party_code);
-                cmd.Parameters.AddWithValue("@cun", cognito_username);
 
                 // Execute the command and return the object, then close the connection
                 List<Food> returnedFoodList = new List<Food>();

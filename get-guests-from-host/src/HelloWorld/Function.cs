@@ -31,10 +31,14 @@ namespace HelloWorld
             {
                 party_code_string = request.QueryStringParameters["party_code"];
             }
-            var body = Handle(party_code_string);
+            var guestList = Handle(party_code_string);
             return new APIGatewayHttpApiV2ProxyResponse{
                 StatusCode = 200,
-                Body = JsonSerializer.Serialize(body)
+                Body = JsonSerializer.Serialize(new
+                {
+                    message = guestList.Count > 0 ? "Guest list retrieved successfully." : "No guests found.",
+                    data = guestList
+                })
             };
         }
 
