@@ -64,7 +64,8 @@ namespace ScratchLambda
                             party_name = reader.GetString("party_name"),
                             party_code = reader.GetString("party_code"),
                             cognito_username = reader.GetGuid("cognito_username"),
-                            invite_only = reader.GetInt32("invite_only")
+                            invite_only = reader.GetInt32("invite_only"),
+                            description = reader.GetString("description"),
                         });
                     }
                 }

@@ -5,9 +5,8 @@
   "httpMethod": "POST",
   "isBase64Encoded": false,
   "queryStringParameters": {
-    "party_code": "ailiebday21",
-    "guest_name": "Cmvallattest",
-    "cognito_username": "64183478-90c1-70b8-732e-b4be05d555d2"
+    "username": "Cmvallattest",
+    "deviceToken": "3a71d22173d25fd866758e2c3de262857ffbf3b3ed38b16b509c3bb4ff0a3e5f"
   },
   "pathParameters": {
     "proxy": "/path/to/resource"
