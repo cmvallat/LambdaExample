@@ -28,7 +28,7 @@ namespace HelloWorld
         {
             string party_code = string.Empty;
             string item_name = string.Empty;
-            Guid cognito_username = Guid.NewGuid();
+            string username = string.Empty;
 
             try
             {
@@ -45,34 +45,26 @@ namespace HelloWorld
                         item_name = request.QueryStringParameters["item_name"];
                     }
 
-                    if (request.QueryStringParameters.ContainsKey("cognito_username"))
+                    if (request.QueryStringParameters.ContainsKey("username"))
                     {
-                        var cognito_username_string = request.QueryStringParameters["cognito_username"];
-                        if (!Guid.TryParse(cognito_username_string, out cognito_username))
-                        {
-                            return new APIGatewayHttpApiV2ProxyResponse
-                            {
-                                StatusCode = 400,
-                                Body = JsonSerializer.Serialize(new { error = "Invalid cognito_username format." })
-                            };
-                        }
+                        username = request.QueryStringParameters["username"];
                     }
                 }
 
                 // Validate required fields
                 if (string.IsNullOrEmpty(party_code) || 
                     string.IsNullOrEmpty(item_name) || 
-                    cognito_username == Guid.Empty)
+                    string.IsNullOrEmpty(username))
                 {
                     return new APIGatewayHttpApiV2ProxyResponse
                     {
                         StatusCode = 400,
-                        Body = JsonSerializer.Serialize(new { error = "party_code and item_name are required." })
+                        Body = JsonSerializer.Serialize(new { error = "party_code, item_name and username are all required." })
                     };
                 }
 
                 // Handle the request and get the response
-                string response = Handle(party_code, item_name, cognito_username);
+                string response = Handle(party_code, item_name, username);
 
                 // Check if the response indicates success or failure
                 int statusCode = response == "Success!" ? 200 : 400;
@@ -93,7 +85,7 @@ namespace HelloWorld
             }
         }
 
-        public string Handle(String party_code, String item_name_string, Guid cognito_username)
+        public string Handle(String party_code, String item_name_string, String username)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
@@ -108,7 +100,7 @@ namespace HelloWorld
                 };
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@pc", party_code);
-                cmd.Parameters.AddWithValue("@cun", cognito_username);
+                cmd.Parameters.AddWithValue("@un", username);
                 cmd.Parameters.AddWithValue("@item", item_name_string);
 
                 // Execute the command and check rows affected

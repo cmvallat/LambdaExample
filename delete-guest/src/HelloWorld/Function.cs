@@ -27,24 +27,36 @@ namespace HelloWorld
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
             var party_code_string = "";
-            var cognito_username = Guid.NewGuid();
-            if(request.QueryStringParameters.ContainsKey("party_code"))
+            string username = string.Empty;
+            
+            if (request.QueryStringParameters != null)
             {
-                party_code_string = request.QueryStringParameters["party_code"];
+                if (request.QueryStringParameters.ContainsKey("username"))
+                {
+                    username = request.QueryStringParameters["username"];
+                }
+                if(request.QueryStringParameters.ContainsKey("party_code"))
+                {
+                    party_code_string = request.QueryStringParameters["party_code"];
+                }
             }
-            if(request.QueryStringParameters.ContainsKey("cognito_username"))
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(party_code_string))
             {
-                var cognito_username_string = request.QueryStringParameters["cognito_username"];
-                cognito_username = new Guid(cognito_username_string);
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = 400,
+                    Body = JsonSerializer.Serialize(new { error = "username and party_code are required fields." })
+                };
             }
-            var body = Handle(party_code_string, cognito_username);
+
+            var response = Handle(party_code_string, username);
             return new APIGatewayHttpApiV2ProxyResponse{
                 StatusCode = 200,
-                Body = body
+                Body = JsonSerializer.Serialize(new { message = response })
             };
         }
 
-        public string Handle(String party_code, Guid cognito_username)
+        public string Handle(String party_code, String username)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
@@ -55,7 +67,7 @@ namespace HelloWorld
                 MySqlCommand cmd = new MySqlCommand("DeleteGuest", connection);
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@pc", party_code);
-                cmd.Parameters.AddWithValue("@cun", cognito_username);
+                cmd.Parameters.AddWithValue("@un", username);
 
                // Execute the command and get the number of rows affected, then close the connection
                 int rowsAffected = cmd.ExecuteNonQuery();

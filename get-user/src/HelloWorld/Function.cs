@@ -31,31 +31,25 @@ namespace HelloWorld
 
             try
             {
-                // Ensure QueryStringParameters is not null
+                // Validate required fields
                 if (request.QueryStringParameters != null)
                 {
-                    if (request.QueryStringParameters.ContainsKey("party_code"))
-                    {
-                        party_code = request.QueryStringParameters["party_code"];
-                    }
                     if (request.QueryStringParameters.ContainsKey("username"))
                     {
                         username = request.QueryStringParameters["username"];
                     }
                 }
-
-                // Validate required fields
-                if (string.IsNullOrEmpty(party_code) || string.IsNullOrEmpty(username))
+                if (string.IsNullOrEmpty(username))
                 {
                     return new APIGatewayHttpApiV2ProxyResponse
                     {
                         StatusCode = 400,
-                        Body = JsonSerializer.Serialize(new { error = "party_code and username are required." })
+                        Body = JsonSerializer.Serialize(new { error = "username is a required field." })
                     };
                 }
 
-                // Retrieve food list
-                var foodList = Handle(party_code, username);
+                // Retrieve user list (should just be one but we need to return a list for front end)
+                var userList = Handle(username);
 
                 // Handle empty lists or successful retrieval
                 return new APIGatewayHttpApiV2ProxyResponse
@@ -63,8 +57,8 @@ namespace HelloWorld
                     StatusCode = 200,
                     Body = JsonSerializer.Serialize(new
                     {
-                        message = foodList.Count > 0 ? "Food list retrieved successfully." : "No foods found.",
-                        data = foodList
+                        message = userList.Count > 0 ? "User retrieved successfully." : "User not found.",
+                        data = userList
                     })
                 };
             }
@@ -88,63 +82,42 @@ namespace HelloWorld
             }
         }
 
-        public List<Food> Handle(String party_code, String username)
+        public List<User> Handle(String username)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
             connection.Open();
 
-            // make sure the user is the host or a guest of the party
-            // otherwise, they should not be able to get the food list
-            MySqlCommand authorizeCmd = new MySqlCommand("AuthorizeUser", connection)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-            authorizeCmd.Parameters.AddWithValue("@pc", party_code);
-            authorizeCmd.Parameters.AddWithValue("@un", username);
-
-            bool isAuthorized = false;
-            using (var reader = authorizeCmd.ExecuteReader())
-            {
-                if (reader.Read())
-                {
-                    isAuthorized = reader.GetInt32("authorized") == 1;
-                }
-            }
-
-            if (!isAuthorized)
-            {
-                throw new UnauthorizedAccessException("User not authorized to access this party's food list.");
-            }
-
-            // if authorized, get the food list
             try
             {
                 //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("GetCurrentFoods", connection)
+                MySqlCommand cmd = new MySqlCommand("GetUser", connection)
                 {
                     CommandType = CommandType.StoredProcedure
                 };
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@pc", party_code);
+                cmd.Parameters.AddWithValue("@un", username);
 
                 // Execute the command and return the object, then close the connection
-                List<Food> returnedFoodList = new List<Food>();
+                List<User> returnedUserList = new List<User>();
 
                 using (MySqlDataReader reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        returnedFoodList.Add(new Food(){
+                        returnedUserList.Add(new User()
+                        {
                             username = reader.GetString("username"),
-                            item_name = reader.GetString("item_name"),
-                            party_code = reader.GetString("party_code"),
-                            status = reader.GetString("status")
+                            email = reader.GetString("email"),
+                            sns_endpoint_arn = SafeGetString(reader, "sns_endpoint_arn")
                         });
                     }
                 }
-
-                return returnedFoodList;
+                if (returnedUserList.Count > 1)
+                {
+                    throw new Exception("Error: Multiple users found for one username");
+                }
+                return returnedUserList;
             }
             catch (MySqlException ex)
             {
@@ -155,5 +128,16 @@ namespace HelloWorld
                 connection.Close();
             }
         }
+        public static string SafeGetString(MySqlDataReader reader, string fieldName)
+        {
+            // get the column index from the column name we know
+            int colIndex = reader.GetOrdinal(fieldName);
+
+            // check if the database returned a null string, if so, return null
+            if (!reader.IsDBNull(colIndex))
+                return reader.GetString(colIndex);
+            return null;
+        }
+
     }
 }

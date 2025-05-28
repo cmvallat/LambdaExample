@@ -26,21 +26,32 @@ namespace ScratchLambda
         DatabaseConnection dbConnection = new DatabaseConnection();
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
-            // Todo: business logic goes here
-            var cognito_username = Guid.NewGuid();
-            if(request.QueryStringParameters.ContainsKey("cognito_username"))
+            // Ensure QueryStringParameters is not null
+            string username = string.Empty;
+
+            if (request.QueryStringParameters != null)
             {
-                var cognito_username_string = request.QueryStringParameters["cognito_username"];
-                cognito_username = new Guid(cognito_username_string);
+                if (request.QueryStringParameters.ContainsKey("username"))
+                {
+                    username = request.QueryStringParameters["username"];
+                }
             }
-            var body = Handle(cognito_username);
+            if (string.IsNullOrEmpty(username))
+            {
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = 400,
+                    Body = JsonSerializer.Serialize(new { error = "username is a required field." })
+                };
+            }
+            var body = Handle(username);
             return new APIGatewayHttpApiV2ProxyResponse{
                 StatusCode = 200,
                 Body = JsonSerializer.Serialize(body)
             };
         }
 
-        public List<Host> Handle(Guid cognito_username)
+        public List<Host> Handle(String username)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
@@ -48,9 +59,9 @@ namespace ScratchLambda
             try
             {
                 //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("GetHostsFromUser", connection);
+                MySqlCommand cmd = new MySqlCommand("GetHostingFromUser", connection);
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@cun", cognito_username);
+                cmd.Parameters.AddWithValue("@un", username);
 
                 // Execute the command and return the object, then close the connection
                 List<Host> returnedHostList = new List<Host>();
@@ -63,7 +74,6 @@ namespace ScratchLambda
                             username = reader.GetString("username"),
                             party_name = reader.GetString("party_name"),
                             party_code = reader.GetString("party_code"),
-                            cognito_username = reader.GetGuid("cognito_username"),
                             invite_only = reader.GetInt32("invite_only"),
                             description = reader.GetString("description"),
                         });
