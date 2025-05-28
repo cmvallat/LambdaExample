@@ -24,14 +24,14 @@ namespace HelloWorld
         DatabaseConnection dbConnection = new DatabaseConnection();
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
-            User userRequest = JsonSerializer.Deserialize<User>(request.Body);
+            Guest guestRequest = JsonSerializer.Deserialize<Guest>(request.Body);
 
             try
             {
-                // Call the Handle method to process the request.
-                string result = Handle(userRequest);
+                // Call the Handle method to process the request
+                string result = Handle(guestRequest);
 
-                // Determine status code based on the result.
+                // Determine status code based on the result
                 int statusCode = result == "Success!" ? 200 : 400;
 
                 return new APIGatewayHttpApiV2ProxyResponse
@@ -49,7 +49,7 @@ namespace HelloWorld
             }
             catch (Exception ex)
             {
-                // Return a 500 response in case of an unhandled exception.
+                // Return a 500 response in case of an unhandled exception
                 return new APIGatewayHttpApiV2ProxyResponse
                 {
                     StatusCode = 500,
@@ -66,7 +66,7 @@ namespace HelloWorld
             }
         }
 
-        public string Handle(User user)
+        public string Handle(Guest guest)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             using var connection = new MySqlConnection(secret);
@@ -74,16 +74,17 @@ namespace HelloWorld
 
             try
             {
-                // Call the stored procedure with parameters.
-                MySqlCommand cmd = new MySqlCommand("AddUser", connection)
+                // Call the stored procedure with parameters
+                MySqlCommand cmd = new MySqlCommand("AddGuest", connection)
                 {
                     CommandType = CommandType.StoredProcedure
                 };
-                cmd.Parameters.AddWithValue("@un", user.username);
-                cmd.Parameters.AddWithValue("@e", user.email);
-                cmd.Parameters.AddWithValue("@cun", user.cognito_username);
+                cmd.Parameters.AddWithValue("@un", guest.username);
+                cmd.Parameters.AddWithValue("@gn", guest.guest_name);
+                cmd.Parameters.AddWithValue("@pc", guest.party_code);
+                cmd.Parameters.AddWithValue("ap", guest.at_party);
 
-                // Execute the command and get the number of rows affected, then close the connection
+                // Execute the command and check the result
                 int rowsAffected = cmd.ExecuteNonQuery();
                 connection.Close();
                 

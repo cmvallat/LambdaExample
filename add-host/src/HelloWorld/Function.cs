@@ -82,8 +82,8 @@ namespace HelloWorld
                 cmd.Parameters.AddWithValue("@un", host.username);
                 cmd.Parameters.AddWithValue("@pn", host.party_name);
                 cmd.Parameters.AddWithValue("@pc", host.party_code);
-                cmd.Parameters.AddWithValue("@cun", host.cognito_username);
                 cmd.Parameters.AddWithValue("inv", host.invite_only);
+                cmd.Parameters.AddWithValue("@descr", host.description);
 
                 // Execute the command and check the result
                 int rowsAffected = cmd.ExecuteNonQuery();

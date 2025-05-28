@@ -1,13 +1,14 @@
 {
-  "body": "{\"test\":\"body\"}",
+  "body": "{\"message\": \"hello world\"}",
   "resource": "/{proxy+}",
   "path": "/path/to/resource",
-  "httpMethod": "GET",
+  "httpMethod": "POST",
+  "isBase64Encoded": false,
   "queryStringParameters": {
-    "username": "Nickg"
+    "query": "catan"
   },
   "pathParameters": {
-    "proxy": "path/to/resource"
+    "proxy": "/path/to/resource"
   },
   "stageVariables": {
     "baz": "qux"
@@ -23,7 +24,7 @@
     "CloudFront-Is-SmartTV-Viewer": "false",
     "CloudFront-Is-Tablet-Viewer": "false",
     "CloudFront-Viewer-Country": "US",
-    "Host": "1234567890.execute-api.{dns_suffix}",
+    "Host": "1234567890.execute-api.us-east-1.amazonaws.com",
     "Upgrade-Insecure-Requests": "1",
     "User-Agent": "Custom User Agent String",
     "Via": "1.1 08f323deadbeefa7af34d5feb414ce27.cloudfront.net (CloudFront)",
@@ -37,12 +38,14 @@
     "resourceId": "123456",
     "stage": "prod",
     "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef",
+    "requestTime": "09/Apr/2015:12:34:56 +0000",
+    "requestTimeEpoch": 1428582896000,
     "identity": {
       "cognitoIdentityPoolId": null,
       "accountId": null,
       "cognitoIdentityId": null,
       "caller": null,
-      "apiKey": null,
+      "accessKey": null,
       "sourceIp": "127.0.0.1",
       "cognitoAuthenticationType": null,
       "cognitoAuthenticationProvider": null,
@@ -50,8 +53,10 @@
       "userAgent": "Custom User Agent String",
       "user": null
     },
+    "path": "/prod/path/to/resource",
     "resourcePath": "/{proxy+}",
     "httpMethod": "POST",
-    "apiId": "1234567890"
+    "apiId": "1234567890",
+    "protocol": "HTTP/1.1"
   }
 }

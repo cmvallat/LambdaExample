@@ -1,13 +1,13 @@
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Sample SAM Template for lambda-dotnet6-1
+  Sample SAM Template for search-parties
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 10
-    MemorySize: 128
+    MemorySize: 512
 
 Resources:
   HelloWorldFunction:
@@ -18,7 +18,7 @@ Resources:
       Runtime: dotnet8
       Architectures:
         - x86_64
-      MemorySize: 256
+      MemorySize: 512
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
           PARAM1: VALUE

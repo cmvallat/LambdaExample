@@ -4,7 +4,7 @@
   "path": "/path/to/resource",
   "httpMethod": "GET",
   "queryStringParameters": {
-    "cognito_username": "77024fc3-54cb-4d64-b856-e6376769cdd6"
+    "username": "Cmvallattest"
   },
   "pathParameters": {
     "proxy": "path/to/resource"

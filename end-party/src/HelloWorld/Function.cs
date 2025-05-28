@@ -93,14 +93,16 @@ namespace HelloWorld
         private async Task NotifyGuestsAsync(string partyCode)
         {
             string connStr = await dbConnection.GetDatabaseSecret();
-            using var conn = new MySqlConnection(connStr);
-            await conn.OpenAsync();
+            using var connection = new MySqlConnection(connStr);
+            await connection.OpenAsync();
 
-            var cmd = new MySqlCommand(
-                "SELECT u.sns_endpoint_arn FROM Users u " + 
-                "INNER JOIN Guest g ON u.username = g.username WHERE " + 
-                "g.party_code = @party_code AND u.sns_endpoint_arn IS NOT NULL;", conn);
-            cmd.Parameters.AddWithValue("@party_code", partyCode);
+            //call the stored procedure with parameters
+            MySqlCommand cmd = new MySqlCommand("GetSNSList", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.AddWithValue("@pc", partyCode);
 
             var snsEndpoints = new List<string>();
             using var reader = await cmd.ExecuteReaderAsync();
