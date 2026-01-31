@@ -5,8 +5,9 @@
   "httpMethod": "POST",
   "isBase64Encoded": false,
   "queryStringParameters": {
-    "party_code": "ailiebday21",
-    "username": "Cmvallattest"
+    "party_code": "demoparty",
+    "username": "cmvallat",
+    "isHost": "false"
   },
   "pathParameters": {
     "proxy": "/path/to/resource"

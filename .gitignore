@@ -21,3 +21,5 @@ lambda-layer-objects/LambdaLayerObjectModels
 lambda-layer-common-functions/bin
 lambda-layer-common-functions/obj
 lambda-layer-common-functions/LambdaLayerObjectModels
+*.zip
+*.pdb

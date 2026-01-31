@@ -23,6 +23,7 @@ namespace HelloWorld
     public class Function
     {
         private readonly DatabaseConnection dbConnection = new DatabaseConnection();
+        private readonly NotifyUsers notify = new NotifyUsers();
         private readonly AmazonSimpleNotificationServiceClient snsClient = new AmazonSimpleNotificationServiceClient();
         private const int maxRetries = 3;
 
@@ -30,12 +31,15 @@ namespace HelloWorld
         {
             string partyCode = request.QueryStringParameters?["party_code"];
             if (string.IsNullOrEmpty(partyCode))
+            {
                 return CreateResponse(400, new { error = "Missing required field: party_code" });
+            }
 
             try
             {
                 // Notify guests first
-                await NotifyGuestsAsync(partyCode);
+                string notifyMessage = $"The party with code {partyCode} has been ended by the host.";
+                await notify.NotifyUsersAsync(partyCode, true, "Party Ended", notifyMessage);
 
                 // Delete Food and Guest with retries
                 await RetryDeleteAsync("DeleteFoodFromEndParty", partyCode);
@@ -90,64 +94,64 @@ namespace HelloWorld
             await cmd.ExecuteNonQueryAsync();
         }
 
-        private async Task NotifyGuestsAsync(string partyCode)
-        {
-            string connStr = await dbConnection.GetDatabaseSecret();
-            using var connection = new MySqlConnection(connStr);
-            await connection.OpenAsync();
+        // private async Task NotifyGuestsAsync(string partyCode)
+        // {
+        //     string connStr = await dbConnection.GetDatabaseSecret();
+        //     using var connection = new MySqlConnection(connStr);
+        //     await connection.OpenAsync();
 
-            //call the stored procedure with parameters
-            MySqlCommand cmd = new MySqlCommand("GetSNSList", connection)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-            cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Parameters.AddWithValue("@pc", partyCode);
+        //     //call the stored procedure with parameters
+        //     MySqlCommand cmd = new MySqlCommand("GetGuestSNSList", connection)
+        //     {
+        //         CommandType = CommandType.StoredProcedure
+        //     };
+        //     cmd.CommandType = CommandType.StoredProcedure;
+        //     cmd.Parameters.AddWithValue("@pc", partyCode);
 
-            var snsEndpoints = new List<string>();
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                snsEndpoints.Add(reader.GetString("sns_endpoint_arn"));
-            }
+        //     var snsEndpoints = new List<string>();
+        //     using var reader = await cmd.ExecuteReaderAsync();
+        //     while (await reader.ReadAsync())
+        //     {
+        //         snsEndpoints.Add(reader.GetString("sns_endpoint_arn"));
+        //     }
 
-            foreach (var arn in snsEndpoints)
-            {
-                var apnsPayload = new
-                {
-                    aps = new
-                    {
-                        alert = new
-                        {
-                            title = "Party Ended",
-                            body = $"The party with code {partyCode} has been ended by the host."
-                        },
-                        sound = "default"
-                    }
-                };
+        //     foreach (var arn in snsEndpoints)
+        //     {
+        //         var apnsPayload = new
+        //         {
+        //             aps = new
+        //             {
+        //                 alert = new
+        //                 {
+        //                     title = "Party Ended",
+        //                     body = $"The party with code {partyCode} has been ended by the host."
+        //                 },
+        //                 sound = "default"
+        //             }
+        //         };
 
-                var messageJson = JsonSerializer.Serialize(new Dictionary<string, string>
-                {
-                    { "APNS_SANDBOX", JsonSerializer.Serialize(apnsPayload) }
-                });
+        //         var messageJson = JsonSerializer.Serialize(new Dictionary<string, string>
+        //         {
+        //             { "APNS_SANDBOX", JsonSerializer.Serialize(apnsPayload) }
+        //         });
 
-                var publishRequest = new PublishRequest
-                {
-                    TargetArn = arn,
-                    MessageStructure = "json",
-                    Message = messageJson
-                };
+        //         var publishRequest = new PublishRequest
+        //         {
+        //             TargetArn = arn,
+        //             MessageStructure = "json",
+        //             Message = messageJson
+        //         };
 
-                try
-                {
-                    await snsClient.PublishAsync(publishRequest);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to notify {arn}: {ex.Message}");
-                }
-            }
-        }
+        //         try
+        //         {
+        //             await snsClient.PublishAsync(publishRequest);
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             Console.WriteLine($"Failed to notify {arn}: {ex.Message}");
+        //         }
+        //     }
+        // }
 
         private APIGatewayHttpApiV2ProxyResponse CreateResponse(int statusCode, object body)
         {

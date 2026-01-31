@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Mvc;
 using LambdaLayerObjects;
 using LambdaLayerCommonFunctions;
 
+using Amazon.Lambda.Core;
+
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
@@ -24,23 +26,37 @@ namespace HelloWorld
         DatabaseConnection dbConnection = new DatabaseConnection();
         public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
         {
-            var party_code_string = "";
-            if(request.QueryStringParameters.ContainsKey("party_code"))
+            // Ensure QueryStringParameters is not null
+            string party_code = string.Empty;
+
+            if (request.QueryStringParameters != null)
             {
-                party_code_string = request.QueryStringParameters["party_code"];
+                if (request.QueryStringParameters.ContainsKey("party_code"))
+                {
+                    party_code = request.QueryStringParameters["party_code"];
+                }
             }
-            var guestList = Handle(party_code_string);
-            return new APIGatewayHttpApiV2ProxyResponse{
+            if (string.IsNullOrEmpty(party_code))
+            {
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = 400,
+                    Body = JsonSerializer.Serialize(new { error = "party_code is a required field." })
+                };
+            }
+            var body = Handle(party_code);
+            return new APIGatewayHttpApiV2ProxyResponse
+            {
                 StatusCode = 200,
                 Body = JsonSerializer.Serialize(new
                 {
-                    message = guestList.Count > 0 ? "Guest list retrieved successfully." : "No guests found.",
-                    data = guestList
+                    message = body ? "Host is active" : "Host is not active",
+                    data = body
                 })
             };
         }
 
-        public List<Guest> Handle(String party_code)
+        public bool Handle(String party_code)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
@@ -48,33 +64,34 @@ namespace HelloWorld
             try
             {
                 //call the stored procedure with parameters
-                MySqlCommand cmd = new MySqlCommand("GetCurrentGuests", connection);
+                MySqlCommand cmd = new MySqlCommand("GetHost", connection);
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@pc", party_code);
 
                 // Execute the command and return the object, then close the connection
-                List<Guest> returnedGuestList = new List<Guest>();
+                List<Host> returnedHostList = new List<Host>();
 
                 using (MySqlDataReader reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        returnedGuestList.Add(new Guest(){
+                        returnedHostList.Add(new Host(){
                             username = reader.GetString("username"),
-                            guest_name = reader.GetString("guest_name"),
+                            party_name = reader.GetString("party_name"),
                             party_code = reader.GetString("party_code"),
-                            at_party = reader.GetInt32("at_party")
+                            invite_only = reader.GetInt32("invite_only"),
+                            description = reader.GetString("description"),
                         });
                     }
                 }
                 connection.Close();
 
-                return returnedGuestList;
+                return returnedHostList.Any();
             }
             catch (MySqlException ex)
             {
                 // Todo: add exception handling
-                return null;
+                throw new Exception("Something went wrong checking the host status: " + ex);
             }
         }
     }
