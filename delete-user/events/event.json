@@ -1,13 +1,11 @@
 {
-  "body": "{\r\n  \"username\": \"cmvallat\",\r\n  \"guest_name\": \"Christian Vallat\",\r\n  \"party_code\": \"ailieother\",\r\n  \"at_party\": 1\r\n}",
+  "body": "{\"message\": \"hello world\"}",
   "resource": "/{proxy+}",
   "path": "/path/to/resource",
   "httpMethod": "POST",
   "isBase64Encoded": false,
   "queryStringParameters": {
-    "party_code": "cmvcatan",
-    "username": "ailiereid",
-    "isHost": "true"
+    "username": "ccm"
   },
   "pathParameters": {
     "proxy": "/path/to/resource"

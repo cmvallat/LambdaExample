@@ -22,23 +22,58 @@ namespace HelloWorld
     public class Function
     {
         DatabaseConnection dbConnection = new DatabaseConnection();
-        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(Food request, ILambdaContext context)
+        NotifyUsers notify = new NotifyUsers();
+        public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(FoodReportRequest request, ILambdaContext context)
         {
-            var result = Handle(request);
-            var statusCode = 200;
-            // change later
-            // if(result != "Success!")
-            // {
-            //     statusCode = 500;
-            // }
-            return new APIGatewayHttpApiV2ProxyResponse
-            {
-                Body = result,
-                StatusCode = statusCode
-            };
-        }
+            var result = await Handle(request.food, request.isHost);
+            var statusCode = result == "Success!" ? 200 : 500;
+            var nullData = new List<Guest>();
+            Console.WriteLine("result:" + result);
 
-        public string Handle(Food food)
+            try
+            {
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = statusCode,
+                    Headers = new Dictionary<string, string>
+                {
+                    { "Content-Type", "application/json" }
+                },
+                    Body = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        message = result
+                    })
+                };
+            }
+            catch (Exception ex)
+            {
+                // Return a 500 response in case of an unhandled exception
+                return new APIGatewayHttpApiV2ProxyResponse
+                {
+                    StatusCode = 500,
+                    Headers = new Dictionary<string, string>
+                    {
+                        { "Content-Type", "application/json" }
+                    },
+                    Body = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        error = "Internal Server Error",
+                        details = ex.Message
+                    })
+                };
+            }
+            // return new APIGatewayHttpApiV2ProxyResponse
+            // {
+            //     StatusCode = statusCode,
+            //     Body = JsonSerializer.Serialize(new
+            //     {
+            //         message = result,
+            //         data = nullData
+            //     })
+            // };
+            }
+
+        public async Task<string> Handle(Food food, bool isHost)
         {
             var secret = dbConnection.GetDatabaseSecret().Result;
             var connection = new MySqlConnection(secret);
@@ -59,6 +94,13 @@ namespace HelloWorld
                 //if something was updated in the db, return success
                 if(rowsAffected != 0)
                 {
+                    // determine who is sending the notification to who and structure message accordingly
+                    string actor = isHost ? "Host" : "Guest";
+                    string notifyMessage = $"{actor} has reported {food.item_name} as {food.status}.";
+
+                    List<string> endpoints = await notify.GetSNSListAsync(food.party_code, isHost, null);
+                    await notify.NotifyUsersAsync(endpoints, "Food update", notifyMessage);
+
                     return "Success!";
                 }
                 //if nothing was updated in the db, but not a SQL error, return generic error message

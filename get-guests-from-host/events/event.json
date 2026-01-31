@@ -5,7 +5,7 @@
   "httpMethod": "POST",
   "isBase64Encoded": false,
   "queryStringParameters": {
-    "party_code": "cmvcatan"
+    "party_code": "ailieother"
   },
   "pathParameters": {
     "proxy": "/path/to/resource"
